@@ -2,9 +2,17 @@ import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 import Admin from '../models/Admin'
 
+let isConnected = false; // Track connection status for Vercel Serverless
+
 const connectDB = async () => {
+  if (isConnected) {
+    console.log('Using cached MongoDB connection')
+    return
+  }
+
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI!)
+    isConnected = !!conn.connections[0].readyState;
     console.log(`MongoDB Connected: ${conn.connection.host}`)
 
     // Seed default Admin if it doesn't exist
@@ -23,7 +31,8 @@ const connectDB = async () => {
     }
   } catch (error: any) {
     console.error(`Error connecting to MongoDB: ${error.message}`)
-    process.exit(1)
+    // In serverless, we shouldn't exit the process. Throw an error instead.
+    throw error
   }
 }
 

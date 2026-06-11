@@ -14,6 +14,7 @@ import statRoutes from './routes/statRoutes'
 import path from 'path'
 
 // Connect to database
+// NOTE: For Vercel Serverless, we use a cached connection in db.ts
 connectDB()
 
 const app = express()
@@ -30,16 +31,10 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/stats', statRoutes)
 
-// Make uploads folder static
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
-
 // Health Check
 app.get('/', (req, res) => {
   res.send('LiveCare Backend API is running...')
 })
 
-const PORT = process.env.PORT || 5000
-
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
-})
+// Export the express app without starting the server
+export default app
