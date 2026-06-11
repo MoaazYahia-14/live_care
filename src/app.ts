@@ -13,11 +13,18 @@ import uploadRoutes from './routes/uploadRoutes'
 import statRoutes from './routes/statRoutes'
 import path from 'path'
 
-// Connect to database
-// NOTE: For Vercel Serverless, we use a cached connection in db.ts
-connectDB()
-
 const app = express()
+
+// Connect to database middleware for Serverless
+app.use(async (req, res, next) => {
+  try {
+    await connectDB()
+    next()
+  } catch (error: any) {
+    console.error('Database connection failed:', error.message)
+    res.status(500).json({ error: 'حدث خطأ في الاتصال بقاعدة البيانات. تأكد من صحة الرابط أو إعدادات Network Access في MongoDB' })
+  }
+})
 
 // Middleware
 app.use(cors())
