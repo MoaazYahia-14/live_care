@@ -1,7 +1,6 @@
 import express from 'express'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
-import { CloudinaryStorage } from 'multer-storage-cloudinary'
 import path from 'path'
 
 const router = express.Router()
@@ -13,18 +12,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    const isPdf = file.mimetype === 'application/pdf'
-    return {
-      folder: 'livecare',
-      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
-      // PDF files must be uploaded as 'raw' or 'image'. 'raw' is safer for keeping them as documents.
-      resource_type: isPdf ? 'raw' : 'auto'
-    }
-  },
-})
+// Use memory storage for multer
+const storage = multer.memoryStorage()
 
 const upload = multer({
   storage: storage,
@@ -50,12 +39,32 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: err.message || 'حدث خطأ أثناء رفع الملف' })
     }
     
-    if (req.file) {
-      // When using multer-storage-cloudinary, req.file.path contains the Cloudinary URL
-      res.json({ url: req.file.path })
-    } else {
-      res.status(400).json({ error: 'لم يتم رفع أي ملف' })
+    if (!req.file) {
+      return res.status(400).json({ error: 'لم يتم رفع أي ملف' })
     }
+
+    const isPdf = req.file.mimetype === 'application/pdf'
+    
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'livecare',
+        resource_type: isPdf ? 'raw' : 'auto'
+      },
+      (error, result) => {
+        if (error) {
+          console.error('Cloudinary Upload Error:', error)
+          return res.status(500).json({ error: 'فشل الرفع إلى التخزين السحابي' })
+        }
+        
+        if (result && result.secure_url) {
+          res.json({ url: result.secure_url })
+        } else {
+          res.status(500).json({ error: 'لم يتم الحصول على رابط الملف' })
+        }
+      }
+    )
+
+    uploadStream.end(req.file.buffer)
   })
 })
 
