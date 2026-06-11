@@ -1,0 +1,7 @@
+node_modules
+.env
+uploads/
+test_upload.js
+dist/
+build/
+.DS_Store
